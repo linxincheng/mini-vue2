@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id='root'>
+    <div>
+      <p>
+        {{ name.firstName }}
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let rkuohao = /\{\{(.+?)\}\}/g
+    function compiler (template, data) {
+      let childNodes = template.childNodes;
+
+      for(let i = 0;i < childNodes.length; i++) {
+        let type = childNodes[i].nodeType;
+        if(type === 3) {
+          let txt = childNodes[i].nodeValue;
+
+          txt = txt.replace(rkuohao, function(_, g) {
+            debugger
+            let key = g.trim(); // 写在双花括号里面的东西
+            let value = data[key];
+            
+            return value
+          })
+
+          childNodes[i].nodeValue = txt;
+        } else if(type === 1) {
+          compiler(childNodes[i], data);
+        }
+      }
+    }
+    
+    function JGVue(options) {
+      // 习惯： 内部的数据使用下划线开头， 只读数据 使用 $开头
+      this._data = options.data;
+      this._el = options.el;
+
+      // 准备工作 ( 准备模板 )
+      this.$el = this._templateDOM = document.querySelector(this._el);
+      this._parent = this._templateDOM.parentNode;
+      // 渲染工作
+      this.render()
+    }
+
+    /**
+     * 将模板 既 可数据， 得到HTML 加到页面中
+     * */
+    JGVue.prototype.render = function() {
+      this.compiler();
+    }
+
+    /**
+     * 编译 将模板和数据结合 得到真正的DOM元素
+     * */
+    JGVue.prototype.compiler = function (tmpNode) {
+      realHTMLDOM = this._templateDOM.cloneNode(true); // 用模板拷贝得到一个准dom
+      compiler(realHTMLDOM, this._data);
+      this.update(realHTMLDOM)
+    }
+
+    /**
+     * 将DOM 的元素放到页面中
+     * */
+    JGVue.prototype.update = function (real) {
+      this._parent.replaceChild(real, document.querySelector('#root'))
+    }
+
+
+    // 怎么用
+
+    let app = new JGVue({
+      el: '#root',
+      data: {
+        name: {
+          firstName: 'zhang',
+          lastName: 'sanfeng'
+        }
+      }
+    })
+
+    // 要解决一个问题
+    // 使用 'xxx.yyy.zzz' 访问一个内容
+    // 使用字符串路径来访问对象的成员
+
+    function getValueByPath(obj, path) {
+      let paths = path.split('.'); // ['xxx', 'yyy' ,'zzz']
+      // 先取得obj.xxx, 再取得结果中yyy ，再取得结果中的 zzz
+      // let res = null;
+      
+      // res = obj[paths[0]];
+      // res = res[paths[1]];
+
+      let res = obj;
+      let prop;
+      while(prop = paths.shift()) {
+        res = res[prop];
+      }
+      return res;
+    }
+  </script>
+</body>
+</html>

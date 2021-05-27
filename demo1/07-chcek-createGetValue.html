@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    // 这个函数实在vue遍历模板的时候就生成了
+    function createGetValueByPath(path) {
+      let paths = path.split('.'); // ['xxx', 'yyy' ,'zzz']
+
+      // 柯里化
+      return function(obj) {
+        let res = obj;
+        let prop;
+        while(prop = paths.shift()) {
+          res = res[prop];
+        }
+        return res;
+      }
+    }
+
+    let o = {
+      a: {
+        b: {
+          c: {
+            d: {
+              e: 'true'
+            }
+          }
+        }
+      }
+    }
+
+    let getValueByPath = createGetValueByPath('a.b.c');
+    let res = getValueByPath(o);
+    console.log(res);
+  </script>
+</body>
+</html>
