@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    let tags = 'div,p,a,img,ul,li'.split(',')
+    function makeMap(keys) {
+      let map = Object.create(null);
+      keys.forEach(key => map[key] = true);
+
+      return function (tagName) {
+        return !!map[tagName.toLowerCase()];
+      }
+    }
+    let c = makeMap(tags)('p')
+    console.log(c);
+  </script>
+</body>
+</html>
