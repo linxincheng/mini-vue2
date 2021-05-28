@@ -115,3 +115,36 @@ Object.defineProperty(obj, 'key', {
 扩张数组的 push 和 pop 等方法
 
 - 修改要进行响应式的数组的原理(**proto**)
+
+# 发布订阅模式
+
+- 代理方式 (app.name, app_data.name)
+- 事件模型(node:event 模板)
+- vue 中 Observer 与 Watcher 和 Dep
+
+代理方法, 就是要将 app.\_data 中的成员给映射到 app 上
+
+由于需要在更新数据的时候,更新页面的内容
+所有 app.\_data 访问的成员 与 app 访问的成员应该是同一个成员
+
+由于 app.\_data 已经是响应式对象了,所以只需要让 app 访问的成员去访问 app.\_data 的对应的成员就可以了.
+
+例如:
+
+```js
+app.name 转换为app._data.name
+app.xxx转换为app._data.xxx
+```
+
+引入了一个函数 proxy(target,src,prop) 将 target 的操作映射到 src.prop 上
+
+提供一个 Oberver 的方法,在方法中对属性进行处理
+可以将这个方法封装到 initData 方法中
+
+## 解释 proxy
+
+```js
+app._data.name
+app.name
+// 访问app.xxx就是在访问app._data.xxx
+```

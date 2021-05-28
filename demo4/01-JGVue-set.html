@@ -225,7 +225,8 @@
         },
         set(newVal) {
           console.log('set', key, newVal);
-          value = newVal;
+          debugger;
+          value = reactify(newVal);
           that.mountComponent();
         }
       })
@@ -252,6 +253,9 @@
         } else {
           defineReactive.call(vm, obj, keys[i], obj[keys[i]], true);
         }
+
+        // 在这里添加代理(问题是这里写的代码是会递归的)
+        // 如果是在这里将属性映射到Vue实例上, 那么就表示Vue实例可以使用属性 key
       }
     }
 

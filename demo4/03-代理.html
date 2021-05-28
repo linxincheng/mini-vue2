@@ -128,7 +128,7 @@
       this._template  = elm;
       this._parent = elm.parentNode;
       
-      reactify( this._data, this /* 将 Vue 实例传入, 折中的处理 */ );
+      this.initData(); // 将data进行响应式转化, 进行代理
 
       this.mount(); // 挂载
     }
@@ -225,7 +225,14 @@
         },
         set(newVal) {
           console.log('set', key, newVal);
-          value = newVal;
+          if(typeof newVal === 'object' && newVal != null) {
+            value = reactify(newVal); // 由于这个方法现在暂时只是过渡的( 不安全 )
+          } else {
+            value = newVal;
+          }
+
+          // 模板刷新(现在是临时的)
+          // vue实例??? watcher就不会有这个问题
           that.mountComponent();
         }
       })
@@ -252,7 +259,42 @@
         } else {
           defineReactive.call(vm, obj, keys[i], obj[keys[i]], true);
         }
+
+        // 在这里添加代理(问题是这里写的代码是会递归的)
+        // 如果是在这里将属性映射到Vue实例上, 那么就表示Vue实例可以使用属性 key
       }
+    }
+
+    JGVue.prototype.initData = function() {
+      // 遍历this._data 的成员,将属性转换为响应式, 将直接属性代理到实例上
+      let keys = Object.keys(this._data);
+      // 响应式化
+      for(let i = 0; i< keys.length; i++) {
+      // 将对象 this._data[key[i]] 变成响应式的
+        reactify(this._data, this);
+      }
+
+      // 代理
+      for(let i = 0; i< keys.length; i++) {
+        // 将this._data[keys[i]] 映射到this[keys[i]] 上
+        // 就是要 让this提供 keys[i] 这个属性
+        // 在访问这个属性的时候相当于在访问this._data的这个属性
+        proxy(this, '_data', keys[i]);
+      }
+    }
+
+    /** 将某一个对象的属性访问 映射到对象的某一个属性成员上 **/
+    function proxy(target, prop, key) {
+      Object.defineProperty(target, key, {
+        enumerable: true,
+        configurable: true,
+        get() {
+          return target[prop][key];
+        },
+        set(newVal) {
+          target[prop][key] = newVal;
+        }
+      })
     }
 
     let app = new JGVue({
