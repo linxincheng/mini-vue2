@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    // 全局的event对象, 提供on, off, emit, once
+    var event = (function () {
+      eventObj = {}
+      // 注册事件, 可以连续注册,可以注册多个事件
+      function on(type, handler) {
+        (eventObj[type] || (eventObj[type] = [])).push(handler)
+      }
+      /**
+       * 移除事件,没有参数,移除所有事件
+       * 如果带有事件名 参数,就移除这个事件名的所有事件
+       * 如果带有2个参数,那么就是表示某一个事件的具体处理函数
+       * **/
+      function off(type, handler) {
+        if(arguments.length === 0) {
+          eventObj = {};
+        } else if (arguments.length === 1) {
+          eventObj[type] = [];
+        } else if(arguments.length === 2) {
+          let _events = eventObj[type];
+          if(!_events) return;
+          for(let i = _events.length - 1; i >= 0; i --) {
+            if(_events[i] === handler) {
+              _events.splice(i, 1);
+            }
+          }
+        }
+
+      }
+
+      function emit(type) {
+        let _events = eventObj[type];
+        if(!_events) return;
+
+        let args = Array.prototype.slice.call(arguments, 1);
+        
+        for(let i = 0; i < _events.length; i ++) {
+          // 绑定上下文
+          _events[i].apply(null, args);
+        }
+
+      }
+      
+      function once(type, hander) {
+        function _on() {
+          off(type, _on);
+          hander.apply(null, arguments)
+        }
+        on(type, _on)
+      }
+      
+      return {
+        on,
+        off,
+        emit,
+        once
+      }
+    })();
+  </script>
+  <script>
+    event.on('click', () => {console.log('1 event')});
+    function f() {
+      event.emit('click')
+    }
+  </script>
+</body>
+</html>
