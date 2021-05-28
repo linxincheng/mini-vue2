@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    let ARRAY_METHOD = [
+      'push',
+      'pop',
+      'shift',
+      'unshift',
+      'reverse',
+      'sort',
+      'splice'
+    ]
+
+    // 思路, 原型式继承: 修改原型链的结构
+    let arr = [];
+
+    let array_methods = Object.create(Array.prototype);
+    ARRAY_METHOD.forEach(method => {
+      array_methods[method] = function() {
+        console.log('拦截了', method, '方法');
+
+        let res = Array.prototype[method].apply(this, arguments);
+
+        return res;
+      }
+    })
+
+    arr.__proto__ = array_methods;
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    let data = {
+      name: 'lin',
+      age: 19,
+      course: [
+        {name: '语文'},
+        {name: '数学'}
+      ]
+    }
+
+    let ARRAY_METHOD = [
+      'push',
+      'pop',
+      'shift',
+      'unshift',
+      'reverse',
+      'sort',
+      'splice'
+    ]
+
+    // 思路, 原型式继承: 修改原型链的结构
+    let arr = [];
+
+    let array_methods = Object.create(Array.prototype);
+    ARRAY_METHOD.forEach(method => {
+      array_methods[method] = function() {
+        console.log('拦截了', method, '方法');
+
+        // 将数据进行响应式化
+        for( let i = 0; i < arguments.length; i++ ) {
+          reactify( arguments[ i ] );
+        } 
+
+        let res = Array.prototype[method].apply(this, arguments);
+
+        return res;
+      }
+    })
+    
+    // 出了递归嗨可以使用队列(深度优先转化为广度优先)
+    // 简化后的版本
+    function defineReactive(target, key, value, enumerable) {
+      if(typeof value === 'object' && value != null && !Array(value)) {
+        reactify(value);
+      }
+
+      Object.defineProperty(target, key, {
+        configurable: true,
+        enumerable: !!enumerable,
+        get() {
+          console.log('get', key)
+          return value;
+        },
+        set(newVal) {
+          console.log('set', key, newVal)
+          value = newVal;
+        }
+      })
+    }
+
+    // 将对象转换为响应式的
+    function reactify(obj) {
+      let keys = Object.keys(obj);
+      for(let i = 0;i < keys.length; i ++) {
+        let key = keys[ i ]; // 属性名
+        let value = obj[ key ];
+
+        // 判断这个属性是不是引用类型,判断是不是数组
+        // 如果引用类型就需要递归
+        // 如果不是引用类型.需要使用defineReactive将其变成响应式
+        // 如果是数组呢? 就需要循环数组,然后将数组里面的元素进行响应式化
+
+        if(Array.isArray(value)) {
+          value.__proto__ = array_methods; // 数组就响应式了
+
+          for(let j = 0;j < value.length; j++) {
+            reactify(value[j]); // 递归
+          }
+        } else {
+          defineReactive(obj, keys[i], obj[keys[i]], true);
+        }
+      }
+    }
+    reactify(data);
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script>
+    let o = {}
+
+    o.name = 'lin'
+
+    // 等价于
+    Object.defineProperty(o, 'age', {
+      configurable: true,
+      writable: true,
+      enumerable: true,
+      value: 'lin'
+    })
+
+    // get 和 set 上
+    // 要响应式旧表示在赋值和读取的时候,附带的要做一些事情
+
+    let _gender = ''
+    Object.defineProperty(o, 'gender', {
+      configurable: true,
+      enumerable: true,
+      get () {
+        return _gender + 'yigeteshudezhi'
+      },
+      set (val) {
+        _gender = val;
+      }
+    })
+  </script>
+</body>
+</html>
