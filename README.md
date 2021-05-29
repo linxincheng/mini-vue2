@@ -223,3 +223,22 @@ Watcher 会有一些方法:
 我们的页面渲染时上面哪一个方法执行的
 
 我们的 watcher 实例有一个属性 vm,表示的就是当前的 vue 实例
+
+# 引入 Dep对象
+该对象进行依赖收集（depend） 的功能和派发更新（notify）的功能
+在nodify中调用watcher的update方法
+
+# Watcher 与 Dep
+渲染Watcher放在全局作用域上的问题
+- vue项目中包含很多的组件，各个组件是自制的
+   - watcher可能会有多个
+   - 每一个watcher用于描述一个渲染行为或者计算行为
+    - 子组件发生数据更新，页面更新需要重新渲染（真正的vue是局部渲染）
+    - vue中推荐的是 计算属性 替代复杂的插值表达式
+      - 计算属性是伴随其使用的属性的变化而变化的
+      - `name: () => this.first + this.lastName`
+         - 计算属性依赖于属性 firstName 和属性 lastName
+         - 只要被依赖的属性发生变化，就会促使计算属性 重新计算 （Watcher）
+- 依赖收集 与 派发更新是如何运行的
+
+# Observer对象
