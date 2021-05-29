@@ -37,7 +37,7 @@ function defineReactive(target, key, value, enumerable) {
 		configurable: true,
 		enumerable: !!enumerable,
 		get() {
-			console.log("get", key)
+			// console.log("get", key)
 			return value
 		},
 		set(newVal) {
@@ -48,43 +48,10 @@ function defineReactive(target, key, value, enumerable) {
 			}
 
 			value = newVal
-
-			// 模板刷新(现在是临时的)
-			// vue实例??? watcher就不会有这个问题
-			typeof that.mountComponent === "function" && that.mountComponent()
-			// 临时: 数组现在没有参与页面的渲染
-			// 所以在数组上进行响应式的处理,不需要页面的刷新
-			// 那么 即使这里无法调用也没有关系
+			// 派发更新，找到全局的watcher， 调用update
+			dep.notify();
 		},
 	})
-}
-
-// 将对象转换为响应式的
-function reactify(obj, vm) {
-	let keys = Object.keys(obj) // 没有对obj本身进行响应式处理,是对obj的成员进行响应式处理
-
-	for (let i = 0; i < keys.length; i++) {
-		let key = keys[i] // 属性名
-		let value = obj[key]
-
-		// 判断这个属性是不是引用类型,判断是不是数组
-		// 如果引用类型就需要递归
-		// 如果不是引用类型.需要使用defineReactive将其变成响应式
-		// 如果是数组呢? 就需要循环数组,然后将数组里面的元素进行响应式化
-
-		if (Array.isArray(value)) {
-			value.__proto__ = array_methods // 数组就响应式了
-
-			for (let j = 0; j < value.length; j++) {
-				reactify(value[j], vm) // 递归
-			}
-		} else {
-			defineReactive.call(vm, obj, keys[i], obj[keys[i]], true)
-		}
-
-		// 在这里添加代理(问题是这里写的代码是会递归的)
-		// 如果是在这里将属性映射到Vue实例上, 那么就表示Vue实例可以使用属性 key
-	}
 }
 
 /** 将某一个对象的属性访问 映射到对象的某一个属性成员上 **/

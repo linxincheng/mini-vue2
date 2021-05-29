@@ -10,8 +10,8 @@ JGVue.prototype.mountComponent = function () {
 	let mount = () => {
 		this.update(this.render())
 	}
-
-	mount.call(this) // 本质上应该交给watcher来调用，目前还没写
+	// 这个 Watcher 就是全局的Watcher， 在任何一个位置都可以访问它（简化的写法）
+	Dep.target = new Watcher(this, mount);
 }
 
 // 这里是生成render函数，目的是缓存抽象语法树（我们使用虚拟DOM来模拟）

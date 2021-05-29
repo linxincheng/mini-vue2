@@ -18,6 +18,7 @@ function getVNode(node) {
 			_vnode.appendChild(getVNode(childNodes[i])) //递归
 		}
 	} else if (nodeType === 3) {
+		
 		_vnode = new VNode(undefined, undefined, node.nodeValue, nodeType)
 	}
 
