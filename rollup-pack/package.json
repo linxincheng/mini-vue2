@@ -1,0 +1,18 @@
+{
+  "name": "rollup-pack",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-prod"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "alias": "0.0.5",
+    "rollup": "^2.50.5",
+    "rollup-plugin-alias": "^2.2.0",
+    "rollup-plugin-flow-no-whitespace": "^1.0.0",
+    "rollup-plugin-uglify-es": "^0.0.1"
+  }
+}
