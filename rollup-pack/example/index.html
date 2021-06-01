@@ -7,11 +7,13 @@
   <title>Document</title>
 </head>
 <body>
+  <div id="app"></div>
   <script src="./../dist/vue.js"></script>
   <script>
-    // let vm = new Vue();
-    // console.log(vm);
-    console.log('Vue:',Vue)
+    let vm = new Vue({
+      el: "#app"
+    });
+    console.log(vm);
   </script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 import { set, del } from "../observer/index"
+import { defineReactive } from "../util/index"
 
 export function initGlobalAPI(Vue) {
 	// 设置只读 config

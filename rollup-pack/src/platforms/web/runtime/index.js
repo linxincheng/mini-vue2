@@ -1,5 +1,4 @@
-// import Vue from "core/index"
-function Vue() {}
+import Vue from "core/index"
 import { patch } from "./patch"
 Vue.prototype.__patch__ = patch
 
