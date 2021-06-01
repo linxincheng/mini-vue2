@@ -4,15 +4,19 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-prod"
+    "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.2",
     "alias": "0.0.5",
     "rollup": "^2.50.5",
     "rollup-plugin-alias": "^2.2.0",
     "rollup-plugin-flow-no-whitespace": "^1.0.0",
     "rollup-plugin-uglify-es": "^0.0.1"
+  },
+  "dependencies": {
+    "@rollup/plugin-node-resolve": "^13.0.0"
   }
 }

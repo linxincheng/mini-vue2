@@ -1,10 +1,12 @@
 const path = require("path")
 const flow = require("rollup-plugin-flow-no-whitespace")
-const alias = require("rollup-plugin-alias")
+// const alias = require("rollup-plugin-alias")
+const alias = require("@rollup/plugin-alias")
 const uglify = require("rollup-plugin-uglify-es")
 const aliases = require("./alias")
-const version = process.env.VERSION || require("../package.json").version
+import resolves from "@rollup/plugin-node-resolve"
 
+const version = process.env.VERSION || require("../package.json").version
 // 返回文件地址
 // eg: resolve('web/entry-runtime-with-compiler.js') => 'src/platforms/web/entry-runtime-with-compiler.js'
 const resolve = (p) => {
@@ -23,9 +25,9 @@ const banner =
 	" * Released under the MIT License.\n" +
 	" */"
 
-// 不同build的配置
+// 不同build的配置 目前只有web
 const builds = {
-	"web-full-prod": {
+	"web-full-dev": {
 		entry: resolve("web/entry-runtime-with-compiler.js"),
 		dest: resolve("dist/vue.js"),
 		format: "umd",
@@ -39,9 +41,22 @@ const builds = {
 function genConfig(name) {
 	const opts = builds[name]
 
+	const entries = Object.keys(aliases).map((key) => {
+		return {
+			find: key,
+			replacement: aliases[key],
+		}
+	})
+
 	const config = {
 		input: opts.entry,
-		plugins: [flow(), alias(Object.assign({}, aliases, opts.alias)), uglify()],
+		plugins: [
+			flow(),
+			alias({
+				entries,
+			}),
+			resolves(),
+		],
 		output: {
 			file: opts.dest,
 			format: opts.format,
