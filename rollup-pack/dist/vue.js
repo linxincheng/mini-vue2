@@ -104,6 +104,8 @@
 
 	function del(target, key) {}
 
+	function observe(value, asRoot) {}
+
 	const cached = function (fn) {
 		const cache = Object.create(null);
 		return function cachedFn(str) {
@@ -236,7 +238,7 @@
 	}
 
 	let uid$1 = 0;
-	class Watcher {
+	class Watcher$1 {
 		vm // 实例
 		expression // 渲染函数 或者关联表达式
 		cb // user watch的callback
@@ -501,7 +503,7 @@
 			vm._update(vm._render());
 		};
 
-		new Watcher(
+		new Watcher$1(
 			vm,
 			updateComponent,
 			noop$1, // 非 user watcher:callback 为空函数
@@ -515,6 +517,19 @@
 			true /* is Render Watcher */
 		);
 	};
+
+	function callHook(vm, hook) {
+		const handlers = vm.$options[hook];
+		if (handlers) {
+			for (let i = 0, j = handlers.length; i < j; i++) {
+				// invoke hook
+				// invokeWithErrorHandling(handlers[i], vm, null, vm, info);
+			}
+		}
+		if (vm._hasHookEvent) {
+			vm.$emit("hook:" + hook);
+		}
+	}
 
 	function initEvents(vm) {
 		vm._events = Object.create(null);
@@ -557,6 +572,187 @@
 		Vue.prototype._render = function () {};
 	}
 
+	// 设置一些属性访问
+	// 在原型上挂载 $watch 方法
+	function stateMixin(Vue) {
+		// 设置默认proxy
+		const dataDef = {};
+		dataDef.get = function () {
+			return this._data
+		};
+		const propsDef = {};
+		propsDef.get = function () {
+			return this._props
+		};
+
+		// 设置访问 $data 访问到 _data
+		// 设置访问 $props 访问到 _props
+		// 一般 $ 开头都是内部只读属性, _ 开头是内部可读可写
+		Object.defineProperty(Vue.prototype, "$data", dataDef);
+		Object.defineProperty(Vue.prototype, "$props", propsDef);
+
+		// 这块先过. 等等回来写
+		// Vue.prototype.$set = set;
+		// Vue.prototype.$delete = del;
+
+		Vue.prototype.$watch = function (expOrFn, cb, options) {};
+	}
+
+	function initState(vm) {
+		vm._watchers = [];
+		const opts = vm.$options;
+		// 处理options.props的成员, 一般定义组件的时候， 用于定义对外的成员
+		if (opts.props) initProps$1(vm, opts.props);
+
+		// 处理options.method的成员，处理方法成员
+		if (opts.methods) initMethods(vm, opts.methods);
+
+		// 处理options.data (响应式)
+		if (opts.data) {
+			initData(vm);
+		} else {
+			observe((vm._data = {}));
+		}
+
+		// 处理options.computed 计算属性
+		if (opts.computed) initComputed$1(vm, opts.computed);
+
+		// 处理 options.watch
+		if (opts.watch && opts.watch !== nativeWatch) {
+			initWatch(vm, opts.watch);
+		}
+	}
+
+	function initData(vm) {
+		let data = vm.$options.data;
+		// 将data 挂载 实例上
+		// 判断是不是函数获得值，并获得函数的返回值
+		data = vm._data = typeof data === "function" ? getData(data, vm) : data || {};
+		if (!isPlainObject(data)) {
+			data = {};
+			process.env.NODE_ENV !== "production" &&
+				warn(
+					"data functions should return an object:\n" +
+						"https://vuejs.org/v2/guide/components.html#data-Must-Be-a-Function",
+					vm
+				);
+		}
+
+		// proxy data on instance
+		const keys = Object.keys(data);
+		const props = vm.$options.props;
+		const methods = vm.$options.methods;
+		let i = keys.length;
+		while (i--) {
+			const key = keys[i];
+
+			// 这里的判断只是为了避免 props，data， method 等数据发生同名冲突问题
+			if (process.env.NODE_ENV !== "production") {
+				if (methods && hasOwn(methods, key)) ;
+			}
+			if (props && hasOwn(props, key)) ; else if (!isReserved(key)) {
+				// 循环了data的所有属性，映射到vue实例上
+				// 就不需要使用app._data.xxx来访问
+				// 而是使用app.xxx 来访问
+				proxy(vm, `_data`, key);
+			}
+		}
+	}
+
+	// 初始化computed
+	function initComputed$1(vm, computed) {
+		// $flow-disable-line
+		const watchers = (vm._computedWatchers = Object.create(null));
+		// computed properties are just getters during SSR
+
+		for (const key in computed) {
+			const userDef = computed[key];
+			const getter = typeof userDef === "function" ? userDef : userDef.get;
+			if (process.env.NODE_ENV !== "production" && getter == null) {
+				warn(`Getter is missing for computed property "${key}".`, vm);
+			}
+			watchers[key] = new Watcher(
+				vm,
+				getter || noop,
+				noop,
+				computedWatcherOptions
+			);
+
+			// component-defined computed properties are already defined on the
+			// component prototype. We only need to define computed properties defined
+			// at instantiation here.
+			if (!(key in vm)) {
+				// 重点关注这个函数
+				defineComputed(vm, key, userDef);
+			} else if (process.env.NODE_ENV !== "production") ;
+		}
+	}
+
+	// 将props属性响应式化
+	//  _props 做proxy
+	function initProps$1(vm, propsOptions) {
+		const propsData = vm.$options.propsData || {};
+		(vm._props = {});
+		const keys = (vm.$options._propKeys = []);
+
+		for (const key in propsOptions) {
+			keys.push(key);
+			validateProp(key, propsOptions, propsData, vm);
+
+			if (!(key in vm)) {
+				proxy(vm, `_props`, key); // 将_props 上的成员 映射到 Vue 实例上
+			}
+		}
+	}
+
+	function initMethods(vm, methods) {
+		const props = vm.$options.props;
+		for (const key in methods) {
+			// 检查这个method 名字是否已经存在
+			if (process.env.NODE_ENV !== "production") {
+				if (typeof methods[key] !== "function") ;
+				if (props && hasOwn(props, key)) {
+					warn(`Method "${key}" has already been defined as a prop.`, vm);
+				}
+				if (key in vm && isReserved(key)) {
+					warn(
+						`Method "${key}" conflicts with an existing Vue instance method. ` +
+							`Avoid defining component methods that start with _ or $.`
+					);
+				}
+			}
+			//  将methods 属性中方法， 绑定上下文后， 挂载 vue 实例上
+			vm[key] = methods[key].bind(vm);
+		}
+	}
+
+	// 这块也不细揪
+	// 主要是 是 生成 user watch
+	function initWatch(vm, watch) {
+		for (const key in watch) {
+			const handler = watch[key];
+			if (Array.isArray(handler)) {
+				for (let i = 0; i < handler.length; i++) {
+					createWatcher(vm, key, handler[i]);
+				}
+			} else {
+				createWatcher(vm, key, handler);
+			}
+		}
+	}
+
+	function createWatcher(vm, expOrFn, handler, options) {
+		if (isPlainObject(handler)) {
+			options = handler;
+			handler = handler.handler;
+		}
+		if (typeof handler === "string") {
+			handler = vm[handler];
+		}
+		// new了 Watcher
+		return vm.$watch(expOrFn, handler, options)
+	}
+
 	let uid = 0;
 	// 在vue原型上挂载_init方法
 	function initMixin$1(Vue) {
@@ -582,6 +778,21 @@
 			initLifecycle(vm); // 初始化组件的状态变量
 			initEvents(vm); // 初始化事件的容器
 			initRender(vm); // 初始化创建元素的方法
+			callHook(vm, "beforeCreate"); // 调用生命周期函数
+			// 这个不重要 注入器相关
+			// initInjections(vm) // resolve injections before data/props // 初始化注入器
+			// 这块重要
+			initState(vm); // 初始化状态数据 （data，property等）
+			// 这个不重要 注入器相关
+			// initProvide(vm) // resolve provide after data/props
+			callHook(vm, "created"); // 生命周期函数的调用
+
+			if (vm.$options.el) {
+				vm.$mount(vm.$options.el); // 组件的挂载，将组件挂载el的元素上
+				// 先调用 扩展的那个$mount 方法 ，生成render
+				// 再调用原始的 $mount 方法， 获得元素，再调用mountComponent 方法
+				// 这两个都定义在platform/web里面
+			}
 		};
 	}
 
@@ -643,32 +854,6 @@
 			}
 		}
 		return modified
-	}
-
-	// 设置一些属性访问
-	// 在原型上挂载 $watch 方法
-	function stateMixin(Vue) {
-		// 设置默认proxy
-		const dataDef = {};
-		dataDef.get = function () {
-			return this._data
-		};
-		const propsDef = {};
-		propsDef.get = function () {
-			return this._props
-		};
-
-		// 设置访问 $data 访问到 _data
-		// 设置访问 $props 访问到 _props
-		// 一般 $ 开头都是内部只读属性, _ 开头是内部可读可写
-		Object.defineProperty(Vue.prototype, "$data", dataDef);
-		Object.defineProperty(Vue.prototype, "$props", propsDef);
-
-		// 这块先过. 等等回来写
-		// Vue.prototype.$set = set;
-		// Vue.prototype.$delete = del;
-
-		Vue.prototype.$watch = function (expOrFn, cb, options) {};
 	}
 
 	function Vue(option) {

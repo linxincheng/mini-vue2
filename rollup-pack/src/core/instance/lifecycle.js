@@ -113,7 +113,7 @@ export const mountComponent = function (vm, el) {
 	)
 }
 
-export function callHook(vm, hook: string) {
+export function callHook(vm, hook) {
 	pushTarget()
 	const handlers = vm.$options[hook]
 	const info = `${hook} hook`

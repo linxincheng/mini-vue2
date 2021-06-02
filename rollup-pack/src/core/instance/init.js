@@ -1,6 +1,7 @@
-import { initLifecycle } from "./lifecycle"
+import { initLifecycle, callHook } from "./lifecycle"
 import { initEvents } from "./events"
 import { initRender } from "./render"
+import { initState } from "./state"
 
 let uid = 0
 // 在vue原型上挂载_init方法
@@ -28,10 +29,20 @@ export function initMixin(Vue) {
 		initEvents(vm) // 初始化事件的容器
 		initRender(vm) // 初始化创建元素的方法
 		callHook(vm, "beforeCreate") // 调用生命周期函数
-		// initInjections(vm); // resolve injections before data/props // 初始化注入器
-		// initState(vm); // 初始化状态数据 （data，property等）
-		// initProvide(vm); // resolve provide after data/props
-		// callHook(vm, "created"); // 生命周期函数的调用
+		// 这个不重要 注入器相关
+		// initInjections(vm) // resolve injections before data/props // 初始化注入器
+		// 这块重要
+		initState(vm) // 初始化状态数据 （data，property等）
+		// 这个不重要 注入器相关
+		// initProvide(vm) // resolve provide after data/props
+		callHook(vm, "created") // 生命周期函数的调用
+
+		if (vm.$options.el) {
+			vm.$mount(vm.$options.el) // 组件的挂载，将组件挂载el的元素上
+			// 先调用 扩展的那个$mount 方法 ，生成render
+			// 再调用原始的 $mount 方法， 获得元素，再调用mountComponent 方法
+			// 这两个都定义在platform/web里面
+		}
 	}
 }
 
