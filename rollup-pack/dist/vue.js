@@ -9,10 +9,75 @@
 	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
-	function Vue(option) {
-		if (!(this instanceof Vue)) console.log("Vue 必须是被new出来的");
-		// this._init(option)
+	// 在vue原型上挂载_init方法
+	function initMixin$1(Vue) {
+		Vue.prototype._init = function (options) {};
 	}
+
+	// 设置一些属性访问
+	// 在原型上挂载 $watch 方法
+	function stateMixin(Vue) {
+		// 设置默认proxy
+		const dataDef = {};
+		dataDef.get = function () {
+			return this._data
+		};
+		const propsDef = {};
+		propsDef.get = function () {
+			return this._props
+		};
+
+		// 设置访问 $data 访问到 _data
+		// 设置访问 $props 访问到 _props
+		// 一般 $ 开头都是内部只读属性, _ 开头是内部可读可写
+		Object.defineProperty(Vue.prototype, "$data", dataDef);
+		Object.defineProperty(Vue.prototype, "$props", propsDef);
+
+		// 这块先过. 等等回来写
+		// Vue.prototype.$set = set;
+		// Vue.prototype.$delete = del;
+
+		Vue.prototype.$watch = function (expOrFn, cb, options) {};
+	}
+
+	// 挂载nextick 和 _render方法
+	function renderMixin(Vue) {
+		Vue.prototype.$nextTick = function (fn) {
+			return procss.nextTick(fn, this)
+		};
+
+		Vue.prototype._render = function () {};
+	}
+
+	// 在原型上挂载 事件模型 on, once, off, emit
+	function eventsMixin(Vue) {
+		Vue.prototype.$on = function () {};
+		Vue.prototype.$once = function () {};
+		Vue.prototype.$off = function () {};
+		Vue.prototype.$emit = function () {};
+	}
+
+	class VNode {
+		tag
+		data
+		children
+		text
+		context //rendered in this component's scope
+
+		constructor(tag, data, children, text, context) {
+			this.tag = tag;
+			this.data = data;
+			this.children = children;
+			this.text = text;
+			this.context = context;
+		}
+	}
+	const createEmptyVNode = (text = "") => {
+		const node = new VNode();
+		node.text = text;
+		node.isComment = true;
+		return node
+	};
 
 	function noop$1(a, b, c) {} // 什么都不做，用来占位置的空函数
 
@@ -113,160 +178,6 @@
 			return obj
 		}
 	}
-
-	function initUse(Vue) {
-		Vue.use = function (plugin) {
-			// 已经被安装的插件会在Vue._installedPlugins找到
-			const installedPlugins =
-				this._installedPlugins || (this._installedPlugins = []);
-
-			// 如果已经安装直接返回
-			if (installedPlugins.indexOf(plugin) > -1) {
-				return this
-			}
-
-			// additional parameters
-			const args = toArray(arguments, 1);
-			args.unshift(this);
-
-			// 如果有install方法就执行
-			// 插件的初始化就在这儿
-			if (typeof plugin.install === "function") {
-				plugin.install.apply(plugin, args);
-			} else if (typeof plugin === "function") {
-				plugin.apply(null, args);
-			}
-			installedPlugins.push(plugin);
-			return this
-		};
-	}
-
-	function initMixin(Vue) {
-		// vue 的mixin 逻辑很简单就是option合并
-		Vue.mixin = function (mixin) {
-			this.options = mergeOptions(this.options, mixin);
-			return this
-		};
-	}
-
-	function initExtend(Vue) {
-		Vue.cid = 0;
-		let cid = 1;
-
-		// 初始化组件
-		// 拿到全局的被指
-		Vue.extend = function (extendOptions) {
-			const Super = this;
-			const SuperId = Super.cid; // 拿到组件cid，第一次加载时undefined
-			const cachedCtors = extendOptions._Ctor || (extendOptions._Ctor = {});
-			// 缓存有就访问缓存
-			if (cachedCtors[SuperId]) {
-				return cachedCtors[SuperId]
-			}
-
-			extendOptions.name || Super.options.name;
-
-			const Sub = function VueComponent(options) {
-				this._init(options);
-			};
-			Sub.prototype = Object.create(Super.prototype);
-			Sub.prototype.constructor = Sub;
-			Sub.cid = cid++;
-			Sub.options = mergeOptions(Super.options, extendOptions);
-			Sub["super"] = Super;
-
-			if (Sub.options.props) {
-				// 设置访问 proxy，可以this.xxx 访问到this._props.xxx
-				initProps(Sub); // initProps方法的源码我不导入了
-			}
-			//
-			if (Sub.options.computed) {
-				// 创建computed watcher
-				initComputed(Sub); // initComputed方法的源码我不导入了
-			}
-		};
-	}
-
-	// 每一个vue组件都会挂载的成员
-	const ASSET_TYPES = ["component", "directive", "filter"];
-
-	function initAssetRegisters(Vue) {
-		// [
-		//    'component',
-		//    'directive',
-		//    'filter'
-		// ]
-		// 创建注册方法
-		// options 里的 components, directives, filters
-		ASSET_TYPES.forEach((type) => {
-			Vue[type] = function (id, definition) {
-				if (!definition) {
-					return this.options[type + "s"][id]
-				} else {
-					if (type === "component") {
-						definition.name = definition.name || id;
-						definition = this.options._base.extend(definition);
-					}
-					if (type === "directive" && typeof definition === "function") {
-						definition = { bind: definition, update: definition };
-					}
-					this.options[type + "s"][id] = definition;
-					return definition
-				}
-			};
-		});
-	}
-
-	function initGlobalAPI(Vue) {
-		// 设置只读 config
-		const configDef = {};
-		configDef.get = () => config;
-		Object.defineProperty(Vue, "config", configDef);
-
-		// 增加Vue util上 def 能力
-		Vue.util = {
-			defineReactive,
-		};
-
-		// 增加 Vue set del nextTick 能力
-		Vue.set = set;
-		Vue.delete = del;
-		// Vue.nextTick = nextTick
-
-		Vue.options = Object.create(null);
-
-		Vue.options._base = Vue;
-
-		initUse(Vue);
-		initMixin(Vue);
-		initExtend(Vue);
-		initAssetRegisters(Vue);
-	}
-
-	// 初始化全局api
-	initGlobalAPI(Vue);
-
-	class VNode {
-		tag
-		data
-		children
-		text
-		context //rendered in this component's scope
-
-		constructor(tag, data, children, text, context) {
-			this.tag = tag;
-			this.data = data;
-			this.children = children;
-			this.text = text;
-			this.context = context;
-		}
-	}
-	const createEmptyVNode = (text = "") => {
-		const node = new VNode();
-		node.text = text;
-		node.isComment = true;
-		return node
-	};
 
 	const seenObjects = new Set();
 
@@ -561,6 +472,38 @@
 		}
 	}
 
+	// 挂载Vue原型上_update 方法
+	function lifecycleMixin(Vue) {
+		Vue.prototype._update = function (vnode) {
+			const vm = this;
+
+			const prevEl = vm.$el;
+			const prevVnode = vm._vnode;
+			vm._vnode = vnode;
+
+			// Vue.prototype.__patch__ 在入口点注入
+			if (!prevVnode) {
+				// 首次渲染
+				vm.$el = vm.__patch__(vm.$el, vnode, false /* removeOnly */);
+			} else {
+				// 更新
+				vm.$el = vm.__patch__(prevVnode, vnode);
+			}
+
+			// update __vue__ reference 到时候可以被GC
+			if (prevEl) {
+				prevEl.__vue__ = null;
+			}
+			if (vm.$el) {
+				vm.$el.__vue__ = vm;
+			}
+		};
+
+		Vue.prototype.$forceUpdate = function () {};
+
+		Vue.prototype.$destroy = function () {};
+	}
+
 	// 挂载组件
 	const mountComponent = function (vm, el) {
 		vm.$el = el;
@@ -592,6 +535,149 @@
 			true /* is Render Watcher */
 		);
 	};
+
+	function Vue(option) {
+		if (!(this instanceof Vue)) console.log("Vue 必须是被new出来的");
+		this._init(option);
+	}
+
+	initMixin$1(Vue); // 挂载初始化方法（_init）
+	stateMixin(Vue); // 挂载状态处理方法
+	eventsMixin(Vue); // 挂载事件的方法
+	lifecycleMixin(Vue); // 挂载节点更新,强制更新,销毁的方法
+	renderMixin(Vue); // 挂载与渲染有关的方法
+
+	function initUse(Vue) {
+		Vue.use = function (plugin) {
+			// 已经被安装的插件会在Vue._installedPlugins找到
+			const installedPlugins =
+				this._installedPlugins || (this._installedPlugins = []);
+
+			// 如果已经安装直接返回
+			if (installedPlugins.indexOf(plugin) > -1) {
+				return this
+			}
+
+			// additional parameters
+			const args = toArray(arguments, 1);
+			args.unshift(this);
+
+			// 如果有install方法就执行
+			// 插件的初始化就在这儿
+			if (typeof plugin.install === "function") {
+				plugin.install.apply(plugin, args);
+			} else if (typeof plugin === "function") {
+				plugin.apply(null, args);
+			}
+			installedPlugins.push(plugin);
+			return this
+		};
+	}
+
+	function initMixin(Vue) {
+		// vue 的mixin 逻辑很简单就是option合并
+		Vue.mixin = function (mixin) {
+			this.options = mergeOptions(this.options, mixin);
+			return this
+		};
+	}
+
+	function initExtend(Vue) {
+		Vue.cid = 0;
+		let cid = 1;
+
+		// 初始化组件
+		// 拿到全局的被指
+		Vue.extend = function (extendOptions) {
+			const Super = this;
+			const SuperId = Super.cid; // 拿到组件cid，第一次加载时undefined
+			const cachedCtors = extendOptions._Ctor || (extendOptions._Ctor = {});
+			// 缓存有就访问缓存
+			if (cachedCtors[SuperId]) {
+				return cachedCtors[SuperId]
+			}
+
+			extendOptions.name || Super.options.name;
+
+			const Sub = function VueComponent(options) {
+				this._init(options);
+			};
+			Sub.prototype = Object.create(Super.prototype);
+			Sub.prototype.constructor = Sub;
+			Sub.cid = cid++;
+			Sub.options = mergeOptions(Super.options, extendOptions);
+			Sub["super"] = Super;
+
+			if (Sub.options.props) {
+				// 设置访问 proxy，可以this.xxx 访问到this._props.xxx
+				initProps(Sub); // initProps方法的源码我不导入了
+			}
+			//
+			if (Sub.options.computed) {
+				// 创建computed watcher
+				initComputed(Sub); // initComputed方法的源码我不导入了
+			}
+		};
+	}
+
+	// 每一个vue组件都会挂载的成员
+	const ASSET_TYPES = ["component", "directive", "filter"];
+
+	function initAssetRegisters(Vue) {
+		// [
+		//    'component',
+		//    'directive',
+		//    'filter'
+		// ]
+		// 创建注册方法
+		// options 里的 components, directives, filters
+		ASSET_TYPES.forEach((type) => {
+			Vue[type] = function (id, definition) {
+				if (!definition) {
+					return this.options[type + "s"][id]
+				} else {
+					if (type === "component") {
+						definition.name = definition.name || id;
+						definition = this.options._base.extend(definition);
+					}
+					if (type === "directive" && typeof definition === "function") {
+						definition = { bind: definition, update: definition };
+					}
+					this.options[type + "s"][id] = definition;
+					return definition
+				}
+			};
+		});
+	}
+
+	function initGlobalAPI(Vue) {
+		// 设置只读 config
+		const configDef = {};
+		configDef.get = () => config;
+		Object.defineProperty(Vue, "config", configDef);
+
+		// 增加Vue util上 def 能力
+		Vue.util = {
+			defineReactive,
+		};
+
+		// 增加 Vue set del nextTick 能力
+		Vue.set = set;
+		Vue.delete = del;
+		// Vue.nextTick = nextTick
+
+		Vue.options = Object.create(null);
+
+		Vue.options._base = Vue;
+
+		initUse(Vue);
+		initMixin(Vue);
+		initExtend(Vue);
+		initAssetRegisters(Vue);
+	}
+
+	// 初始化全局api
+	initGlobalAPI(Vue);
 
 	/*  */
 

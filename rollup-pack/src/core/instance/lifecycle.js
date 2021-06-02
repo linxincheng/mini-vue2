@@ -13,7 +13,8 @@ export function setActiveInstance(vm) {
 	}
 }
 
-export function lifrcycleMixin(Vue) {
+// 挂载Vue原型上_update 方法
+export function lifecycleMixin(Vue) {
 	Vue.prototype._update = function (vnode) {
 		const vm = this
 
@@ -45,6 +46,10 @@ export function lifrcycleMixin(Vue) {
 			vm.$el.__vue__ = vm
 		}
 	}
+
+	Vue.prototype.$forceUpdate = function () {}
+
+	Vue.prototype.$destroy = function () {}
 }
 
 // 挂载组件
