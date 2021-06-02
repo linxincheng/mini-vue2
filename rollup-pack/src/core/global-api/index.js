@@ -1,5 +1,7 @@
 import { initUse } from "./use"
 import { initMixin } from "./mixin"
+import { initExtend } from "./extend"
+import { initAssetRegisters } from "./assets"
 
 import { set, del } from "../observer/index"
 import { defineReactive } from "../util/index"
@@ -26,6 +28,6 @@ export function initGlobalAPI(Vue) {
 
 	initUse(Vue)
 	initMixin(Vue)
-	// initExtend(Vue)
-	// initAssetRegisters(Vue)
+	initExtend(Vue)
+	initAssetRegisters(Vue)
 }
