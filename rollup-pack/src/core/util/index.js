@@ -1,4 +1,6 @@
 export * from "shared/util"
+export * from "./options"
+
 export { defineReactive } from "../observer/index"
 
 export const cached = function (fn) {

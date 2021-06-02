@@ -1,3 +1,6 @@
+import { initUse } from "./use"
+import { initMixin } from "./mixin"
+
 import { set, del } from "../observer/index"
 import { defineReactive } from "../util/index"
 
@@ -20,4 +23,9 @@ export function initGlobalAPI(Vue) {
 	Vue.options = Object.create(null)
 
 	Vue.options._base = Vue
+
+	initUse(Vue)
+	initMixin(Vue)
+	// initExtend(Vue)
+	// initAssetRegisters(Vue)
 }

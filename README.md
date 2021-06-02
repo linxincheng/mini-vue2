@@ -1,3 +1,7 @@
+# miniVue
+
+mini 版本 Vue2.x, 实现了 Vue 最核心部分代码,从 01 - 05 demo 记录了 vue 源码中的一些核心概念，再到 rollup-pack 使用 rollup 组织 vue2.x 最核心的流程
+
 # 实现核心 vue2 源码模型
 
 数据驱动
@@ -281,3 +285,5 @@ oberver 各个文件的作用
 - scheduler.js vue 中任务调度的工具， watcher 执行的核心
 - traverse.js 递归遍历响应式数据，目的是触发依赖收集
 - watcher.js Watcher 类
+
+README 文档先偷个懒,会延迟于代码更新
