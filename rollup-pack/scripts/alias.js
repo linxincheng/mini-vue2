@@ -8,4 +8,5 @@ module.exports = {
 	vue: resolve("src/platforms/web/entry-runtime-with-compiler"),
 	web: resolve("src/platforms/web"),
 	core: resolve("src/core"),
+	compiler: resolve("src/compiler"),
 }

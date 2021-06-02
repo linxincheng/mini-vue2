@@ -1,3 +1,5 @@
+import { createCompilerCreator } from "./create-compiler"
+
 //  返回 Ast
 export const createCompiler = createCompilerCreator(function baseCompile(
 	template,
