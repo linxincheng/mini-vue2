@@ -49,9 +49,10 @@ Vue 利用提供的数据 和页面中模板 生成了一个新的 HTML 标签�
 1. 判断元素：
    Vue 本质上是使用 HTML 的字符串作为模板的，将字符串的模板转换为 AST，再转换为 VNode
 
-- 模板 -> AST (最消耗性能，字符串解析)
-- AST ->VNode
-- VNode -> DOM
+- .vue 组件读取 (template, style, script...) 在源码 src/sfc/parser.js
+- 模板 -> AST (最消耗性能，词法解析->字符串正则解析->ast)
+- AST -> VNode (主要通过 render function)
+- VNode -> DOM (update new,old -> patch)
 
 例子： let s = "1 + 2 \* （3 + 4）"
 写一个程序，解析这个表达式，得到结果（一般化）

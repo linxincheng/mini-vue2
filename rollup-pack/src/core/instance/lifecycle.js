@@ -21,6 +21,7 @@ export function lifrcycleMixin(Vue) {
 		const prevVnode = vm._vnode
 
 		// 设置当前活动的vue实例
+		// 相当于执行栈
 		const restoreActiveInstance = setActiveInstance(vm)
 		vm._vnode = vnode
 
