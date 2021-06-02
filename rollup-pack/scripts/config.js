@@ -1,8 +1,12 @@
 const path = require("path")
 const flow = require("rollup-plugin-flow-no-whitespace")
+// vue使用的映射插件，一直有问题
 // const alias = require("rollup-plugin-alias")
+// 这是我使用的映射插件
 const alias = require("@rollup/plugin-alias")
 const uglify = require("rollup-plugin-uglify-es")
+
+// 映射对象
 const aliases = require("./alias")
 import resolves from "@rollup/plugin-node-resolve"
 
