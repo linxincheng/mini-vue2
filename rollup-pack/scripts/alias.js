@@ -9,4 +9,5 @@ module.exports = {
 	web: resolve("src/platforms/web"),
 	core: resolve("src/core"),
 	compiler: resolve("src/compiler"),
+	shared: resolve("src/shared"),
 }

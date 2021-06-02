@@ -5,11 +5,6 @@ export function traverse(val) {
 	seenObjects.clear()
 }
 
-export function traverse(val) {
-	_traverse(val, seenObjects)
-	seenObjects.clear()
-}
-
 // 进行深度依赖收集
 function _traverse(val, seen) {
 	let i, keys

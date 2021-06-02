@@ -20,6 +20,8 @@
 
 	function del(target, key) {}
 
+	function noop$1(a, b, c) {} // 什么都不做，用来占位置的空函数
+
 	const cached = function (fn) {
 		const cache = Object.create(null);
 		return function cachedFn(str) {
@@ -27,6 +29,25 @@
 			return hit || (cache[str] = fn(str))
 		}
 	};
+
+	const unicodeRegExp = /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037D\u037F-\u1FFF\u200C-\u200D\u203F-\u2040\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD/;
+	const bailRE = new RegExp(`[^${unicodeRegExp.source}.$_\\d]`);
+	// 简化版本 export const unicodeRegExp = /a-zA-Z/;
+	function parsePath(path) {
+		// 用于匹配xxx.xxx.xx 正则表达式
+		// 'xxx.xxx.xxx' return xxx.xxx.xxx
+		if (bailRE.test(path)) {
+			return
+		}
+		const segments = path.split(".");
+		return function (obj) {
+			for (let i = 0; i < segments.length; i++) {
+				if (!obj) return
+				obj = obj[segments[i]];
+			}
+			return obj
+		}
+	}
 
 	function initGlobalAPI(Vue) {
 		// 设置只读 config
@@ -51,6 +72,346 @@
 
 	// 初始化全局api
 	initGlobalAPI(Vue);
+
+	class VNode {
+		tag
+		data
+		children
+		text
+		context //rendered in this component's scope
+
+		constructor(tag, data, children, text, context) {
+			this.tag = tag;
+			this.data = data;
+			this.children = children;
+			this.text = text;
+			this.context = context;
+		}
+	}
+	const createEmptyVNode = (text = "") => {
+		const node = new VNode();
+		node.text = text;
+		node.isComment = true;
+		return node
+	};
+
+	const seenObjects = new Set();
+
+	function traverse(val) {
+		_traverse(val, seenObjects);
+		seenObjects.clear();
+	}
+
+	// 进行深度依赖收集
+	function _traverse(val, seen) {
+		let i, keys;
+		const isA = Array.isArray(val);
+
+		// 如果数据不是响应式的就不需要递归
+		// if (
+		// (!isA && !isObject(val)) ||
+		// Object.isFrozen(val) ||
+		// val instanceof VNode
+		// ) {
+		// 	return
+		// }
+
+		// __ob__ 表示这个对象是响应式对象， ob 就是 observer
+		if (val.__ob__) {
+			const depId = val.__ob__.dep.id;
+
+			// 保证了循环引用不会递归遍历
+			if (seen.has(depId)) {
+				return
+			}
+			seen.add(depId);
+		}
+		if (isA) {
+			i = val.length;
+			while (i--) _traverse(val[i], seen); // 对每一个数组项进行访问
+		} else {
+			keys = Object.keys(val);
+			i = keys.length;
+			while (i--) _traverse(val[keys[i]], seen); // 对每一个对象的属性进行访问
+		}
+	}
+
+	// watcher 队列
+	const queue = [];
+
+	let has = {};
+
+	// 开关标记
+	// 异步的触发没有开始，类比setTimeout还没有执行
+	let waiting = false;
+	// 开始渲染，清空队列，执行队列中的watcher的run方法
+	let flushing = false;
+
+	// 触发更新
+	function flushSchedulerQueue() {
+		flushing = true;
+		let watcher, id;
+
+		// 对watcher进行排序
+		queue.sort((a, b) => a.id - b.id);
+
+		for (index = 0; index < queue.length; index++) {
+			watcher = queue[index];
+			if (watcher.before) {
+				watcher.before();
+			}
+			id = watcher.id;
+			has[id] = null;
+			watcher.run();
+		}
+	}
+
+	function queueWatcher(watcher) {
+		const id = watcher.id;
+
+		// 检查下是否在队列里
+		if (has[id] == null) {
+			has[id] = true;
+			if (!flushing) {
+				queue.push(watcher);
+			} else {
+				// if already flushing, splice the watcher based on its id
+				// if already past its id, it will be run next immediately.
+				let i = queue.length - 1;
+				while (i > index && queue[i].id > watcher.id) {
+					i--;
+				}
+				queue.splice(i + 1, 0, watcher);
+			}
+			// queue the flush
+			if (!waiting) {
+				waiting = true;
+
+				if (!config.async) {
+					// 同步情况下
+					flushSchedulerQueue();
+					return
+				}
+				// 让任务队列中的watcher 在下 ‘一个事件循环’中触发
+				// 不阻塞当前的处理逻辑
+				process.nextTick(flushSchedulerQueue);
+			}
+		}
+	}
+
+	let uid = 0;
+	class Watcher {
+		vm // 实例
+		expression // 渲染函数 或者关联表达式
+		cb // user watch的callback
+		id
+		lazy // 计算属性和watch 来控制不要让watcher 立即执行
+		user // 是不是user watch
+		deep // 是否深度监听
+
+		// 在 Vue 中使用了二次提交的概念
+		// 每次在数据渲染或计算的时候 就会访问响应式的数据，就会进行依赖收集
+		// 就将关联的Watcher 与 dep 相关联
+		// 在数据发生变化的时候，根据dep 找到关联的watcher，依次调用 update
+		// 执行完成后清空 watcher
+		deps
+		newDeps
+		depIds
+		newDepIds
+
+		before // 用于before生命周期
+
+		getter // 就是渲染函数（模板或组件的渲染） 或计算属性（watch）
+
+		value // 如果是渲染函数，value无效，如果是计算属性，缓存的值
+
+		constructor(vm, expOrFn, cb, options, isRenderWatcher) {
+			this.vm = vm;
+			if (isRenderWatcher) {
+				vm._watcher = this;
+			}
+
+			// options
+			if (options) {
+				this.user = !!options.user;
+				this.lazy = !!options.lazy;
+				this.before = options.before;
+				this.deep = options.deep;
+			} else {
+				this.user = this.lazy = false;
+			}
+
+			this.cb = cb;
+			this.id = ++uid; // uid for batching
+			this.active = true;
+			this.deps = [];
+			this.newDeps = [];
+			this.depIds = new Set();
+			this.newDepIds = new Set();
+
+			this.expression = expOrFn.toString();
+
+			if (typeof expOrFn === "function") {
+				// 就是render函数
+				this.getter = expOrFn;
+			} else {
+				this.getter = parsePath(expOrFn);
+			}
+
+			// 如果是lazy就什么也不做，否则就立即调用getter函数求值（expOfFn）
+			this.value = this.lazy ? undefined : this.get();
+		}
+
+		get() {
+
+			value = this.getter.call(vm, vm);
+
+			// 去访问每一个属性，收集依赖
+			if (this.deep) {
+				traverse(value);
+			}
+			this.cleanupDeps(); // “清空（归档）” 关联的dep 属性
+		}
+
+		addDep(dep) {
+			const id = dep.id;
+			if (!this.newDepIds.has(id)) {
+				this.newDepIds.add(id);
+				this.newDeps.push(dep); // 让 watcher 关联 dep
+
+				if (!this.depIds.has(id)) {
+					dep.addSub(this); // 让 dep 关联到 watcher
+				}
+			}
+		}
+
+		// 更新 dep相关的四个属性， 删除旧的， 新的变旧的
+		cleanupDeps() {
+			let i = this.deps.length;
+			while (i--) {
+				const dep = this.deps[i];
+
+				// 在二次提交中 归档 就是让旧的deps 和新的 newDeps 一致
+				if (!this.newDepIds.has(dep.id)) {
+					dep.removeSub(this);
+				}
+			}
+			let tmp = this.depIds;
+			this.depIds = this.newDepIds;
+			this.newDepIds = tmp;
+			this.newDepIds.clear();
+			tmp = this.deps;
+			this.deps = this.newDeps; // 同步
+			this.newDeps = tmp;
+			this.newDeps.length = 0;
+		}
+
+		// 说明 watcher 的数据（eg: 属性修改）有变化
+		update() {
+			/* istanbul ignore else */
+			if (this.lazy) {
+				// 主要针对计算属性，一般用于求值计算
+				this.dirty = true;
+			} else if (this.sync) {
+				// 同步，主要用于ssr， 同步就表示立即计算
+				this.run();
+			} else {
+				// 加入到一个队列里
+				// 一般的浏览器中的异步运行， 本质上就是异步执行 run
+				// 类比 setTimeout(() => this.run, 0)
+				queueWatcher(this);
+			}
+		}
+
+		depend() {
+			let i = this.deps.length;
+			while (i--) {
+				this.deps[i].depend();
+			}
+		}
+
+		/**
+		 * 调用get求值或渲染，如果求值，新旧值不一样，就触发cb
+		 */
+		run() {
+			if (this.active) {
+				const value = this.get(); // 要么渲染，要么求值
+				if (
+					value !== this.value ||
+					// Deep watchers and watchers on Object/Arrays should fire even
+					// when the value is the same, because the value may
+					// have mutated.
+					isObject(value) ||
+					this.deep
+				) {
+					// set new value
+					const oldValue = this.value;
+					this.value = value;
+					// if (this.user) {
+					//   const info = `callback for watcher "${this.expression}"`;
+					//   invokeWithErrorHandling(
+					//     this.cb,
+					//     this.vm,
+					//     [value, oldValue],
+					//     this.vm,
+					//     info
+					//   );
+					// } else {
+
+					// 就在这儿
+					this.cb.call(this.vm, value, oldValue);
+
+					// }
+				}
+			}
+		}
+
+		/**
+		 * 移除数据，相当于remove
+		 * 一般用于销毁组件的时候调用
+		 */
+		teardown() {
+			if (this.active) {
+				if (!this.vm._isBeingDestroyed) {
+					remove(this.vm._watchers, this);
+				}
+				let i = this.deps.length;
+				while (i--) {
+					this.deps[i].removeSub(this);
+				}
+				this.active = false;
+			}
+		}
+	}
+
+	const mountComponent = function (vm, el) {
+		vm.$el = el;
+		if (!vm.$options.render) {
+			vm.$options.render = createEmptyVNode;
+		}
+
+		callHook(vm, "beforeMount");
+
+		let updateComponent = () => {
+			// _render 用来生成虚拟DOM
+			// _update 内部调用patch 方法 将虚拟DOM与真实的DOM同步（diff）
+			vm._update(vm._render());
+		};
+
+		new Watcher(
+			vm,
+			updateComponent,
+			noop$1, // 非 user watcher:callback 为空函数
+			{
+				before() {
+					if (vm._isMounted && !vm._isDestroyed) {
+						callHook(vm, "beforeUpdate");
+					}
+				},
+			},
+			true /* is Render Watcher */
+		);
+	};
 
 	/*  */
 
