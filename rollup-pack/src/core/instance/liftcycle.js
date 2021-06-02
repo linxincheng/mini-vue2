@@ -1,4 +1,5 @@
 import { createEmptyVNode } from "../vdom/vnode"
+import Watcher from "../observer/watcher"
 
 import { noop } from "../util/index"
 
@@ -57,17 +58,17 @@ export const mountComponent = function (vm, el) {
 		vm._update(vm._render())
 	}
 
-	// new Watcher(
-	// 	vm,
-	// 	updateComponent,
-	// 	noop, // 非 user watcher:callback 为空函数
-	// 	{
-	// 		before() {
-	// 			if (vm._isMounted && !vm._isDestroyed) {
-	// 				callHook(vm, "beforeUpdate")
-	// 			}
-	// 		},
-	// 	},
-	// 	true /* is Render Watcher */
-	// )
+	new Watcher(
+		vm,
+		updateComponent,
+		noop, // 非 user watcher:callback 为空函数
+		{
+			before() {
+				if (vm._isMounted && !vm._isDestroyed) {
+					callHook(vm, "beforeUpdate")
+				}
+			},
+		},
+		true /* is Render Watcher */
+	)
 }
