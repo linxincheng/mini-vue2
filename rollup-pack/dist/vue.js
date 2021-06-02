@@ -214,8 +214,10 @@
 		// 就将关联的Watcher 与 dep 相关联
 		// 在数据发生变化的时候，根据dep 找到关联的watcher，依次调用 update
 		// 执行完成后清空 watcher
-		deps
-		newDeps
+		deps // 依赖的当前dep list
+		newDeps // 依赖的最新dep list
+
+		// 下面两个属性，主要为了做比较，去重
 		depIds
 		newDepIds
 
@@ -323,8 +325,10 @@
 			}
 		}
 
+		// 依赖收集
 		depend() {
 			let i = this.deps.length;
+			// watcher 和 dep 之前互存
 			while (i--) {
 				this.deps[i].depend();
 			}
@@ -384,8 +388,11 @@
 		}
 	}
 
+	// 挂载组件
 	const mountComponent = function (vm, el) {
 		vm.$el = el;
+		// 如果没有render fn
+		// 先将render fn设置为 创建空的vnode
 		if (!vm.$options.render) {
 			vm.$options.render = createEmptyVNode;
 		}

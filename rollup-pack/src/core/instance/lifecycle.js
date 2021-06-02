@@ -20,6 +20,7 @@ export function lifrcycleMixin(Vue) {
 		const prevEl = vm.$el
 		const prevVnode = vm._vnode
 
+		// 设置当前活动的vue实例
 		const restoreActiveInstance = setActiveInstance(vm)
 		vm._vnode = vnode
 
@@ -32,6 +33,7 @@ export function lifrcycleMixin(Vue) {
 			vm.$el = vm.__patch__(prevVnode, vnode)
 		}
 
+		// 更新完之后设置恢复为之前的vue实例
 		restoreActiveInstance()
 
 		// update __vue__ reference 到时候可以被GC
@@ -44,8 +46,11 @@ export function lifrcycleMixin(Vue) {
 	}
 }
 
+// 挂载组件
 export const mountComponent = function (vm, el) {
 	vm.$el = el
+	// 如果没有render fn
+	// 先将render fn设置为 创建空的vnode
 	if (!vm.$options.render) {
 		vm.$options.render = createEmptyVNode
 	}
