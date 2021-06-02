@@ -9,54 +9,6 @@
 	(global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
-	// 在vue原型上挂载_init方法
-	function initMixin$1(Vue) {
-		Vue.prototype._init = function (options) {};
-	}
-
-	// 设置一些属性访问
-	// 在原型上挂载 $watch 方法
-	function stateMixin(Vue) {
-		// 设置默认proxy
-		const dataDef = {};
-		dataDef.get = function () {
-			return this._data
-		};
-		const propsDef = {};
-		propsDef.get = function () {
-			return this._props
-		};
-
-		// 设置访问 $data 访问到 _data
-		// 设置访问 $props 访问到 _props
-		// 一般 $ 开头都是内部只读属性, _ 开头是内部可读可写
-		Object.defineProperty(Vue.prototype, "$data", dataDef);
-		Object.defineProperty(Vue.prototype, "$props", propsDef);
-
-		// 这块先过. 等等回来写
-		// Vue.prototype.$set = set;
-		// Vue.prototype.$delete = del;
-
-		Vue.prototype.$watch = function (expOrFn, cb, options) {};
-	}
-
-	// 挂载nextick 和 _render方法
-	function renderMixin(Vue) {
-		Vue.prototype.$nextTick = function (fn) {
-			return procss.nextTick(fn, this)
-		};
-
-		Vue.prototype._render = function () {};
-	}
-
-	// 在原型上挂载 事件模型 on, once, off, emit
-	function eventsMixin(Vue) {
-		Vue.prototype.$on = function () {};
-		Vue.prototype.$once = function () {};
-		Vue.prototype.$off = function () {};
-		Vue.prototype.$emit = function () {};
-	}
-
 	class VNode {
 		tag
 		data
@@ -99,7 +51,7 @@
 	 *将两个选项对象合并为一个新对象。
 	 *用于实例化和继承的核心实用程序。
 	 */
-	function mergeOptions(parent, child, vm) {
+	function mergeOptions$1(parent, child, vm) {
 		if (typeof child === "function") {
 			child = child.options;
 		}
@@ -116,12 +68,12 @@
 		if (!child._base) {
 			// 如果有 extends 就深入合并
 			if (child.extends) {
-				parent = mergeOptions(parent, child.extends, vm);
+				parent = mergeOptions$1(parent, child.extends, vm);
 			}
 			// 如果有 mixins 就深入合并
 			if (child.mixins) {
 				for (let i = 0, l = child.mixins.length; i < l; i++) {
-					parent = mergeOptions(parent, child.mixins[i], vm);
+					parent = mergeOptions$1(parent, child.mixins[i], vm);
 				}
 			}
 		}
@@ -283,7 +235,7 @@
 		}
 	}
 
-	let uid = 0;
+	let uid$1 = 0;
 	class Watcher {
 		vm // 实例
 		expression // 渲染函数 或者关联表达式
@@ -328,7 +280,7 @@
 			}
 
 			this.cb = cb;
-			this.id = ++uid; // uid for batching
+			this.id = ++uid$1; // uid for batching
 			this.active = true;
 			this.deps = [];
 			this.newDeps = [];
@@ -472,6 +424,34 @@
 		}
 	}
 
+	function initLifecycle(vm) {
+		const options = vm.$options;
+
+		// locate first non-abstract parent
+		let parent = options.parent;
+		// 给所有祖先组件的$children增加vm实例
+		if (parent && !options.abstract) {
+			while (parent.$options.abstract && parent.$parent) {
+				parent = parent.$parent;
+			}
+			parent.$children.push(vm);
+		}
+
+		// 以下是增加初始化属性
+		vm.$parent = parent;
+		vm.$root = parent ? parent.$root : vm;
+
+		vm.$children = [];
+		vm.$refs = {};
+
+		vm._watcher = null;
+		vm._inactive = null;
+		vm._directInactive = false;
+		vm._isMounted = false;
+		vm._isDestroyed = false;
+		vm._isBeingDestroyed = false;
+	}
+
 	// 挂载Vue原型上_update 方法
 	function lifecycleMixin(Vue) {
 		Vue.prototype._update = function (vnode) {
@@ -536,6 +516,142 @@
 		);
 	};
 
+	function initEvents(vm) {
+		vm._events = Object.create(null);
+		// 初始化父组件的事件
+		vm.$options._parentListeners;
+	}
+
+	// 在原型上挂载 事件模型 on, once, off, emit
+	function eventsMixin(Vue) {
+		Vue.prototype.$on = function () {};
+		Vue.prototype.$once = function () {};
+		Vue.prototype.$off = function () {};
+		Vue.prototype.$emit = function () {};
+	}
+
+	let uid = 0;
+	// 在vue原型上挂载_init方法
+	function initMixin$1(Vue) {
+		Vue.prototype._init = function (options) {
+			// 当前vue实例
+			const vm = this;
+			// 唯一标识
+			vm.uid = uid++;
+			// merge options
+			if (options && options._isComponent) {
+				// 是不是一个组件
+				// 开始进行源码分析，一般都是使用简单的Vue实例，这里针对组件，暂时略
+				initInternalComponent(vm, options);
+			} else {
+				vm.$options = mergeOptions(
+					// mergerOptions 可以简单理解为配置合并
+					resolveConstructorOptions(vm.constructor),
+					options || {},
+					vm
+				);
+			}
+
+			initLifecycle(vm); // 初始化组件的状态变量
+			initEvents(vm); // 初始化事件的容器
+		};
+	}
+
+	// 这个函数主要将父元素的一些属性挂载到$options上
+	function initInternalComponent(vm, options) {
+		const opts = (vm.$options = Object.create(vm.constructor.options));
+		// doing this because it's faster than dynamic enumeration.
+		const parentVnode = options._parentVnode;
+		opts.parent = options.parent;
+		opts._parentVnode = parentVnode;
+
+		const vnodeComponentOptions = parentVnode.componentOptions;
+		opts.propsData = vnodeComponentOptions.propsData;
+		opts._parentListeners = vnodeComponentOptions.listeners;
+		opts._renderChildren = vnodeComponentOptions.children;
+		opts._componentTag = vnodeComponentOptions.tag;
+
+		// 在这里获取render函数
+		if (options.render) {
+			opts.render = options.render;
+			opts.staticRenderFns = options.staticRenderFns;
+		}
+	}
+
+	// 合并父组件的options
+	// 这块不用深入，直接过
+	function resolveConstructorOptions(Ctor) {
+		let options = Ctor.options;
+		if (Ctor.super) {
+			const superOptions = resolveConstructorOptions(Ctor.super);
+			const cachedSuperOptions = Ctor.superOptions;
+			if (superOptions !== cachedSuperOptions) {
+				// super option changed,
+				// need to resolve new options.
+				Ctor.superOptions = superOptions;
+				// check if there are any late-modified/attached options (#4976)
+				const modifiedOptions = resolveModifiedOptions(Ctor);
+				// update base extend options
+				if (modifiedOptions) {
+					extend(Ctor.extendOptions, modifiedOptions);
+				}
+				options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions);
+				if (options.name) {
+					options.components[options.name] = Ctor;
+				}
+			}
+		}
+		return options
+	}
+
+	function resolveModifiedOptions(Ctor) {
+		let modified;
+		const latest = Ctor.options;
+		const sealed = Ctor.sealedOptions;
+		for (const key in latest) {
+			if (latest[key] !== sealed[key]) {
+				if (!modified) modified = {};
+				modified[key] = latest[key];
+			}
+		}
+		return modified
+	}
+
+	// 设置一些属性访问
+	// 在原型上挂载 $watch 方法
+	function stateMixin(Vue) {
+		// 设置默认proxy
+		const dataDef = {};
+		dataDef.get = function () {
+			return this._data
+		};
+		const propsDef = {};
+		propsDef.get = function () {
+			return this._props
+		};
+
+		// 设置访问 $data 访问到 _data
+		// 设置访问 $props 访问到 _props
+		// 一般 $ 开头都是内部只读属性, _ 开头是内部可读可写
+		Object.defineProperty(Vue.prototype, "$data", dataDef);
+		Object.defineProperty(Vue.prototype, "$props", propsDef);
+
+		// 这块先过. 等等回来写
+		// Vue.prototype.$set = set;
+		// Vue.prototype.$delete = del;
+
+		Vue.prototype.$watch = function (expOrFn, cb, options) {};
+	}
+
+	// 挂载nextick 和 _render方法
+	function renderMixin(Vue) {
+		Vue.prototype.$nextTick = function (fn) {
+			return procss.nextTick(fn, this)
+		};
+
+		Vue.prototype._render = function () {};
+	}
+
 	function Vue(option) {
 		if (!(this instanceof Vue)) console.log("Vue 必须是被new出来的");
 		this._init(option);
@@ -577,7 +693,7 @@
 	function initMixin(Vue) {
 		// vue 的mixin 逻辑很简单就是option合并
 		Vue.mixin = function (mixin) {
-			this.options = mergeOptions(this.options, mixin);
+			this.options = mergeOptions$1(this.options, mixin);
 			return this
 		};
 	}
@@ -605,7 +721,7 @@
 			Sub.prototype = Object.create(Super.prototype);
 			Sub.prototype.constructor = Sub;
 			Sub.cid = cid++;
-			Sub.options = mergeOptions(Super.options, extendOptions);
+			Sub.options = mergeOptions$1(Super.options, extendOptions);
 			Sub["super"] = Super;
 
 			if (Sub.options.props) {

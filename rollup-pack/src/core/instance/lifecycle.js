@@ -13,6 +13,34 @@ export function setActiveInstance(vm) {
 	}
 }
 
+export function initLifecycle(vm) {
+	const options = vm.$options
+
+	// locate first non-abstract parent
+	let parent = options.parent
+	// 给所有祖先组件的$children增加vm实例
+	if (parent && !options.abstract) {
+		while (parent.$options.abstract && parent.$parent) {
+			parent = parent.$parent
+		}
+		parent.$children.push(vm)
+	}
+
+	// 以下是增加初始化属性
+	vm.$parent = parent
+	vm.$root = parent ? parent.$root : vm
+
+	vm.$children = []
+	vm.$refs = {}
+
+	vm._watcher = null
+	vm._inactive = null
+	vm._directInactive = false
+	vm._isMounted = false
+	vm._isDestroyed = false
+	vm._isBeingDestroyed = false
+}
+
 // 挂载Vue原型上_update 方法
 export function lifecycleMixin(Vue) {
 	Vue.prototype._update = function (vnode) {
