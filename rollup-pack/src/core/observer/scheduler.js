@@ -9,6 +9,25 @@ let waiting = false
 // 开始渲染，清空队列，执行队列中的watcher的run方法
 let flushing = false
 
+// 触发更新
+function flushSchedulerQueue() {
+	flushing = true
+	let watcher, id
+
+	// 对watcher进行排序
+	queue.sort((a, b) => a.id - b.id)
+
+	for (index = 0; index < queue.length; index++) {
+		watcher = queue[index]
+		if (watcher.before) {
+			watcher.before()
+		}
+		id = watcher.id
+		has[id] = null
+		watcher.run()
+	}
+}
+
 export function queueWatcher(watcher) {
 	const id = watcher.id
 
