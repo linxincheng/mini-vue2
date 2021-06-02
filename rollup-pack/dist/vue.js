@@ -530,6 +530,33 @@
 		Vue.prototype.$emit = function () {};
 	}
 
+	// 返回一个创建vnode的render函数
+	function createElement(
+		context,
+		tag,
+		data,
+		children,
+		normalizationType,
+		alwaysNormalize
+	) {
+		// return _createElement(context, tag, data, children, normalizationType)
+	}
+
+	// 初始化创建元素的方法
+	function initRender(vm) {
+		vm._c = (a, b, c, d) => createElement(); // 系统创建元素的方法
+		vm.$createElement = (a, b, c, d) => createElement(); // 用户提供了render 属性时创建元素的方法
+	}
+
+	// 挂载nextick 和 _render方法
+	function renderMixin(Vue) {
+		Vue.prototype.$nextTick = function (fn) {
+			return procss.nextTick(fn, this)
+		};
+
+		Vue.prototype._render = function () {};
+	}
+
 	let uid = 0;
 	// 在vue原型上挂载_init方法
 	function initMixin$1(Vue) {
@@ -554,6 +581,7 @@
 
 			initLifecycle(vm); // 初始化组件的状态变量
 			initEvents(vm); // 初始化事件的容器
+			initRender(vm); // 初始化创建元素的方法
 		};
 	}
 
@@ -641,15 +669,6 @@
 		// Vue.prototype.$delete = del;
 
 		Vue.prototype.$watch = function (expOrFn, cb, options) {};
-	}
-
-	// 挂载nextick 和 _render方法
-	function renderMixin(Vue) {
-		Vue.prototype.$nextTick = function (fn) {
-			return procss.nextTick(fn, this)
-		};
-
-		Vue.prototype._render = function () {};
 	}
 
 	function Vue(option) {

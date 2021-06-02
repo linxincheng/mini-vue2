@@ -1,5 +1,6 @@
 import { initLifecycle } from "./lifecycle"
 import { initEvents } from "./events"
+import { initRender } from "./render"
 
 let uid = 0
 // 在vue原型上挂载_init方法
@@ -25,6 +26,7 @@ export function initMixin(Vue) {
 
 		initLifecycle(vm) // 初始化组件的状态变量
 		initEvents(vm) // 初始化事件的容器
+		initRender(vm) // 初始化创建元素的方法
 	}
 }
 
