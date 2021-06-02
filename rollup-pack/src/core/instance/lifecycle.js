@@ -1,5 +1,6 @@
 import { createEmptyVNode } from "../vdom/vnode"
 import Watcher from "../observer/watcher"
+import { pushTarget, popTarget } from "../observer/dep"
 
 import { noop } from "../util/index"
 
@@ -110,4 +111,20 @@ export const mountComponent = function (vm, el) {
 		},
 		true /* is Render Watcher */
 	)
+}
+
+export function callHook(vm, hook: string) {
+	pushTarget()
+	const handlers = vm.$options[hook]
+	const info = `${hook} hook`
+	if (handlers) {
+		for (let i = 0, j = handlers.length; i < j; i++) {
+			// invoke hook
+			// invokeWithErrorHandling(handlers[i], vm, null, vm, info);
+		}
+	}
+	if (vm._hasHookEvent) {
+		vm.$emit("hook:" + hook)
+	}
+	popTarget()
 }

@@ -27,6 +27,11 @@ export function initMixin(Vue) {
 		initLifecycle(vm) // 初始化组件的状态变量
 		initEvents(vm) // 初始化事件的容器
 		initRender(vm) // 初始化创建元素的方法
+		callHook(vm, "beforeCreate") // 调用生命周期函数
+		// initInjections(vm); // resolve injections before data/props // 初始化注入器
+		// initState(vm); // 初始化状态数据 （data，property等）
+		// initProvide(vm); // resolve provide after data/props
+		// callHook(vm, "created"); // 生命周期函数的调用
 	}
 }
 
