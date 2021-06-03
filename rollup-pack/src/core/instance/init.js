@@ -38,6 +38,7 @@ export function initMixin(Vue) {
 		callHook(vm, "created") // 生命周期函数的调用
 
 		if (vm.$options.el) {
+			// 在entry-runtime-with-compiler.js挂载的$mount 方法
 			vm.$mount(vm.$options.el) // 组件的挂载，将组件挂载el的元素上
 			// 先调用 扩展的那个$mount 方法 ，生成render
 			// 再调用原始的 $mount 方法， 获得元素，再调用mountComponent 方法

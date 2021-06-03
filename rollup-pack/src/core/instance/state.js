@@ -163,6 +163,8 @@ function initProps(vm, propsOptions) {
 	}
 }
 
+// 检查名字是否重复
+// method绑定上下文
 function initMethods(vm, methods) {
 	const props = vm.$options.props
 	for (const key in methods) {
