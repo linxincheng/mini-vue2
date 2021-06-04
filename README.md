@@ -1,6 +1,6 @@
 # miniVue
-
-mini 版本 Vue2.x, 实现了 Vue 最核心部分代码,从 01 - 05 demo 记录了 vue 源码中的一些核心概念，再到 rollup-pack 使用 rollup 组织 vue2.x 最核心的流程
+vue2.x 抽取的源码在rollup-pack文件夹
+从 01 - 05 demo 记录了 vue 源码中的一些核心概念
 
 # 实现核心 vue2 源码模型
 
